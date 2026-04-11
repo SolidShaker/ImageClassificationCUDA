@@ -31,7 +31,7 @@ int main()
     }
     
     int device = 0;
-    cudaGetDevice(device);
+    cudaGetDevice(&device);
 
     cudaMemAdvise(A, size, cudaMemAdviseSetPreferredLocation, device);
     cudaMemAdvise(B, size, cudaMemAdviseSetPreferredLocation, device);
