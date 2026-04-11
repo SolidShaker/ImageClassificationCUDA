@@ -1,47 +1,39 @@
 #include <iostream>
-#include <cuda_runtime.h>
+
+#include "vibeflow.h"
 
 
-#define N (1<<10)
-
-__global__ void 
-krVecMul(float *A, float *B, float *C, float n)
-{
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (i < n)
-        C[i] = A[i] * B[i];
-}
 
 
 int main()
 {
-
+    int N = 1000;
     float *A, *B, *C;
-    size_t size = N * sizeof(float);
+    size_t size = sizeof(float);
+    size_t size_vec = N * size;
 
-    cudaMallocManaged(&A, size);
-    cudaMallocManaged(&B, size);
+    cudaMallocManaged(&A, size_vec);
+    cudaMallocManaged(&B, size_vec);
     cudaMallocManaged(&C, size);
 
     for (int i = 0; i < N; i++)
     {
-        A[i] = i * 1.0f;
+        A[i] = 1.0f;
         B[i] = 2.0f;
     }
     
     int device = 0;
     cudaGetDevice(&device);
 
-    cudaMemAdvise(A, size, cudaMemAdviseSetPreferredLocation, device);
-    cudaMemAdvise(B, size, cudaMemAdviseSetPreferredLocation, device);
+    cudaMemAdvise(A, size_vec, cudaMemAdviseSetPreferredLocation, device);
+    cudaMemAdvise(B, size_vec, cudaMemAdviseSetPreferredLocation, device);
     cudaMemAdvise(C, size, cudaMemAdviseSetPreferredLocation, device);
 
-    cudaMemAdvise(A, size, cudaMemAdviseSetReadMostly, device);
-    cudaMemAdvise(B, size, cudaMemAdviseSetReadMostly, device);
+    cudaMemAdvise(A, size_vec, cudaMemAdviseSetReadMostly, device);
+    cudaMemAdvise(B, size_vec, cudaMemAdviseSetReadMostly, device);
 
-    cudaMemPrefetchAsync(A, size, device);
-    cudaMemPrefetchAsync(B, size, device);
+    cudaMemPrefetchAsync(A, size_vec, device);
+    cudaMemPrefetchAsync(B, size_vec, device);
     cudaMemPrefetchAsync(C, size, device);
 
     int threads = 256;
