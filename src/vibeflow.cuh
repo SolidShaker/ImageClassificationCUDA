@@ -8,7 +8,11 @@
 
 namespace VB
 {
-    __global__ void krDot(float *A, float *B, float *C, int N);
+    namespace DOT
+    {
+        __global__ void krDotStart(float *A, float *B, float *blockSum, int N);
+        __global__ void krDotEnd(float *blockSum, float *result, int N);
+    }
 }
 
 #endif
