@@ -23,17 +23,18 @@ int main()
     }
     
     int device = 0;
-    cudaGetDevice(&device);
+    cudaSetDevice(&device);
 
     cudaMemAdvise(A, size_vec, cudaMemAdviseSetPreferredLocation, device);
     cudaMemAdvise(B, size_vec, cudaMemAdviseSetPreferredLocation, device);
-    cudaMemAdvise(C, size, cudaMemAdviseSetPreferredLocation, device);
 
     cudaMemAdvise(A, size_vec, cudaMemAdviseSetReadMostly, device);
     cudaMemAdvise(B, size_vec, cudaMemAdviseSetReadMostly, device);
 
     cudaMemPrefetchAsync(A, size_vec, device);
     cudaMemPrefetchAsync(B, size_vec, device);
+
+    *C = 0.0f;
     cudaMemPrefetchAsync(C, size, device);
 
     int threads = 256;
