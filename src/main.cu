@@ -39,7 +39,7 @@ int main()
     int threads = 256;
     int blocks = (N + threads - 1) / threads;
 
-    krVecMul<<<blocks, threads>>>(A, B, C, N);
+    VB::krDot<<<blocks, threads>>>(A, B, C, N);
 
     cudaDeviceSynchronize();
 
