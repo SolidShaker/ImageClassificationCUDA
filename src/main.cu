@@ -2,7 +2,7 @@
 #include <cuda_runtime.h>
 
 
-#define N 1<<20
+#define N 1<<10
 
 __global__ void 
 krVecMul(float *A, float *B, float *C, float n)
