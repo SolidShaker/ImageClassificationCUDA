@@ -44,7 +44,7 @@ int main()
     cudaDeviceSynchronize();
 
     for (int i = 0; i < 10; i++)
-        std::cout << A[i] << " * " << B[i] << " = " << C << "\n";
+        std::cout << A[i] << " * " << B[i] << " = " << *C << "\n";
 
     cudaFree(A);
     cudaFree(B);
