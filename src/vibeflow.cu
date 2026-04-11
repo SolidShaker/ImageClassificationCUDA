@@ -3,32 +3,51 @@
 
 namespace VB
 {
-    __global__ void 
-    krDot(float *A, float *B, float *C, int N)
+    __global__ void krDot(float *A, float *B, float *C, int N)
     {
-        __shared__ float cache[256];
+        int tid = threadIdx.x;
+        int idx = blockIdx.x * blockDim.x + tid;
+        int stride = blockDim.x * gridDim.x;
 
-        int i = threadIdx.x;
-        int pos = blockDim.x * blockIdx.x + threadIdx.x;
+        float sum = 0.0f;
 
-        float sum = 0;
-        int stride_global = gridDim.x * blockDim.x;
-        while (pos < N)
+        // -------------------------
+        // grid-stride loop
+        // -------------------------
+        while (idx < N)
         {
-            sum += A[pos] * B[pos];
-            pos += stride_global;
+            sum += A[idx] * B[idx];
+            idx += stride;
         }
-        cache[i] = sum;
+
+        // -------------------------
+        // warp reduction
+        // -------------------------
+        for (int offset = 16; offset > 0; offset >>= 1)
+            sum += __shfl_down_sync(0xffffffff, sum, offset);
+
+        int lane   = tid % 32;
+        int warpId = tid / 32;
+
+        __shared__ float warpSum[32];
+
+        if (lane == 0)
+            warpSum[warpId] = sum;
+
         __syncthreads();
 
-        for (int stride = blockDim.x / 2; stride > 0; stride >>= 1)
+        // -------------------------
+        // final warp reduction
+        // -------------------------
+        if (warpId == 0)
         {
-            if (i < stride)
-                cache[i] += cache[i + stride];
-            __syncthreads();
+            sum = (lane < (blockDim.x + 31) / 32) ? warpSum[lane] : 0.0f;
+
+            for (int offset = 16; offset > 0; offset >>= 1)
+                sum += __shfl_down_sync(0xffffffff, sum, offset);
+
+            if (lane == 0)
+                atomicAdd(C, sum);
         }
-        
-        if (threadIdx.x == 0)
-            atomicAdd(C, cache[0]);
     }
 }
