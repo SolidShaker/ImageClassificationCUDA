@@ -34,8 +34,8 @@ int main()
     cudaMemPrefetchAsync(A, size_vec, device);
     cudaMemPrefetchAsync(B, size_vec, device);
 
-    *C = 0.0f;
     cudaMemPrefetchAsync(C, size, device);
+    cudaMemset(C, 0, sizeof(float));
 
     int threads = 256;
     int blocks = (N + threads - 1) / threads;
