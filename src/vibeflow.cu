@@ -1,4 +1,4 @@
-#include "vibeflow.h"
+#include "vibeflow.cuh"
 
 
 namespace VB
