@@ -5,11 +5,11 @@
 #define N 1<<20
 
 __global__ void 
-krVecMul(float *A, float *B, float *C, float N)
+krVecMul(float *A, float *B, float *C, float n)
 {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
 
-    if (i < N)
+    if (i < n)
         C[i] = A[i] * B[i];
 }
 
