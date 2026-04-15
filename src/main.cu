@@ -3,6 +3,7 @@
 #include "vibeflowTypes.cuh"
 #include "vibeflow.cuh"
 
+#include <iostream>
 
 #define DEBUG
 
@@ -22,65 +23,43 @@
 
 int main()
 {
-    int N = 1 << 20;
-    int N4 = N / 4;
-    int threads = 256;
-    int blocks  = (N4 + threads -1 ) / threads;
+    int M = 1 << 10;
+    int N = 1 << 5;
+    int P = 1 << 10;
+    int pP = VB::UTILS::HOST::GetPadding(P);
 
+    size_t sizeA  = M * N;
+    size_t sizeB  = N * P;
+    size_t pSizeB = N * pP;
+    size_t pSizeC = M * pP;
 
-    VB::Variable<float> A, B;
-    A.Allocate(N);
-    B.Allocate(N);
+    float *hA = new float[sizeA];
+    float *hB = new float[sizeB];
+    float *hC = new float[pSizeC];
 
-    // float *A, *B;
-    // cudaMalloc((void**)&A, N * sizeof(float));
-    // cudaMalloc((void**)&B, N * sizeof(float));
+    for (size_t i = 0; i < sizeA; i++) hA[i] = 1.0f;
+    for (size_t i = 0; i < sizeB; i++) hB[i] = 2.0f;
 
-    float *hA = new float[N];
-    float *hB = new float[N];
-    for (int i = 0; i < N; i++)
-    {
-        hA[i] = 1.0f;
-        hB[i] = 2.0f;
-    }
+    VB::Variable<float> dA;
+    VB::Variable<float> dB;
+    VB::Variable<float> dC;
 
-    A.Write(hA, N);
-    B.Write(hB, N);
-    // cudaMemcpy(A, hA, N * sizeof(float), cudaMemcpyHostToDevice);
-    // cudaMemcpy(B, hB, N * sizeof(float), cudaMemcpyHostToDevice);
+    dA.Allocate(sizeA);
+    dB.Allocate(pSizeB);
+    dC.Allocate(pSizeC);
 
+    dA.Write(hA, sizeA);
+    dB.Write(hB, sizeB);
 
-    VB::Variable<float> blockSum;
-    VB::Variable<float> result;
-    blockSum.Allocate(blocks);
-    result.Allocate();
-    // float *blockSum;
-    // float *result;
-    // cudaMalloc((void**)&blockSum, blocks * sizeof(float));
-    // cudaMalloc((void**)&result, sizeof(float));
-
-    
-    VB::DOT::krDotStart<<<blocks, threads>>>(A.Get(), B.Get(), blockSum.Get(), N);
+    VB::DEVICE::GEMM::GEMM(dA, dB, dC, M, N, P, pP, VB::THREADS::T256); 
+    CUDA_CHECK("An error occured in GEMM");
     cudaDeviceSynchronize();
-    CUDA_CHECK("Start dot error");
 
-    VB::DOT::krDotEnd<<<1, threads>>>(blockSum.Get(), result.Get(), blocks);
-    cudaDeviceSynchronize();
-    CUDA_CHECK("End dot error");
+    dC.Read(hC, pSizeC);
 
-    float d_result;
-    result.Read(&d_result, 1);
-    // cudaMemcpy(&d_result, result, sizeof(float), cudaMemcpyDeviceToHost);
-
-    std::cout << d_result << std::endl;
-
-    // cudaFree(A);
-    // cudaFree(B);
-    // cudaFree(blockSum);
-    // cudaFree(result);
-
-    free(hA);
-    free(hB);
+    for (int i = 0; i < 10; i++)
+        std::cout << hC[i] << " ";
+    std::cout << "\n expected =" << 2.0f * N;
 
     return 0;
 }
