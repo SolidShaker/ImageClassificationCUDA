@@ -3,30 +3,11 @@
 
 #include <cuda_runtime.h>
 
-constexpr int WARP_SIZE = 32;
-constexpr int TILE_M = 32;
-constexpr int TILE_N = 32;
-
 
 
 
 namespace VB
 {
-    enum class THREADS
-    {
-        T32   = 32,
-        T64   = 64,
-        T128  = 128,
-        T256  = 256,
-        T512  = 512,
-        T1024 = 1024,
-    };
-
-    inline int ToThreads(THREADS t)
-    {
-        return static_cast<int>(t);
-    }
-
     template <typename T>
     class Variable
     {
