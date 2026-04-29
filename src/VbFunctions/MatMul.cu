@@ -1,4 +1,4 @@
-#include "matmul.cuh"
+#include "MatMul.cuh"
 
 
 namespace vb
