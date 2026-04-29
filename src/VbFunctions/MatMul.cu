@@ -36,10 +36,8 @@ namespace Vb
         const int baseRow = blockIdx.y * BM + warpRow * WARP_M;
         const int baseCol = blockIdx.x * BN + warpCol * WARP_N;
 
-        // __shared__ float As[BM][BK];
-        // __shared__ float Bs[BK][BN];
-        __shared__ float As[BK][BM];
-        __shared__ float Bs[BN][BK];
+        __shared__ float As[BM][BK];
+        __shared__ float Bs[BK][BN];
 
         float acc[4] = {0.f, 0.f, 0.f, 0.f}; // small register tile
 
