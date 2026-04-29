@@ -3,7 +3,7 @@
 
 
 
-namespace VB
+namespace Vb
 {
     __device__ void Dot(const float* A,
                         const float* B,

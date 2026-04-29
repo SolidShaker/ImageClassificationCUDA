@@ -1,5 +1,5 @@
-#ifndef DOTPRODUCT
-#define DOTPRODUCT
+#ifndef DOTPRODUCT_CUH
+#define DOTPRODUCT_CUH
 
 #include "Utils.cuh"
 #include <cuda_runtime.h>
@@ -12,7 +12,7 @@ namespace DOT_CONFIG
 };
 
 
-namespace VB
+namespace Vb
 {
     __device__ void Dot(const float* A,
                         const float* B,

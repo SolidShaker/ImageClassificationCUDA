@@ -1,5 +1,5 @@
-#ifndef MATMUL_H
-#define MATMUL_H
+#ifndef MATMUL_CUH
+#define MATMUL_CUH
 
 #include "Utils.cuh"
 #include <cuda_runtime.h>
@@ -16,7 +16,7 @@ namespace GEMM_CONFIG
     constexpr int TN = 8;     // per-thread cols
 }
 
-namespace VB
+namespace Vb
 {
     __host__ void GEMM(const float* A, 
                        const float* B,

@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef UTILS_CUH
+#define UTILS_CUH
 
 #include <cuda_runtime.h>
 
@@ -23,7 +23,7 @@ constexpr int TILE_SIZE = 32;
 
 
 
-namespace VB
+namespace Vb
 {
 
 
