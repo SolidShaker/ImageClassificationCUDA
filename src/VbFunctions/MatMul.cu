@@ -75,4 +75,5 @@ namespace Vb
 
         if (r < M && c < N)
             C[r * N + c] = acc[0];
+    }
 }
