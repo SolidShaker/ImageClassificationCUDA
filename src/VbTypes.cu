@@ -3,14 +3,17 @@
 
 namespace Vb
 {
-    Variable::Variable(Variable&& other) noexcept
+    template<typename T>
+    Variable<T>::Variable(Variable&& other) noexcept
     {
         data = other.data;
         other.data = nullptr;
     }
 
+
+    template<typename T>
     Variable&
-    Variable::operator=(Variable&& other) noexcept
+    Variable<T>::operator=(Variable&& other) noexcept
     {
         if (this != &other)
         {
@@ -21,14 +24,16 @@ namespace Vb
         return *this;
     }
 
-    Variable::~Variable()
+    template<typename T>
+    Variable<T>::~Variable()
     {
         if (data)
             cudaFree(data);
     }
 
+    template<typename T>
     void 
-    Variable::Allocate(size_t amount)
+    Variable<T>::Allocate(size_t amount)
     {
         if (data) cudaFree(data);
 
@@ -36,14 +41,16 @@ namespace Vb
         cudaMemset(data, 0, amount*sizeof(T));
     }
 
+    template<typename T>
     void 
-    Variable::Write(const T *inp, size_t amount)
+    Variable<T>::Write(const T *inp, size_t amount)
     {
         cudaMemcpy(data, inp, amount * sizeof(T), cudaMemcpyHostToDevice);
     }
 
+    template<typename T>
     void 
-    Variable::Read(T *out, size_t amount)
+    Variable<T>::Read(T *out, size_t amount)
     {
         cudaMemcpy(out, data, amount * sizeof(T), cudaMemcpyDeviceToHost);
     }
