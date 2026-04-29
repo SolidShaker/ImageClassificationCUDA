@@ -10,8 +10,8 @@ namespace Vb
     {
         using namespace GEMM_CONFIG;
 
-        dim3 blockDim(WARPS_X * WARPS_Y * 32);  // 512 threads
-        dim3 gridDim(
+        dim3 block(BN, BM);   // 128 x 128 threads
+        dim3 grid(
             (N + BN - 1) / BN,
             (M + BM - 1) / BM
         );
@@ -20,87 +20,72 @@ namespace Vb
     }
 
     __global__ void krGEMM(const float* __restrict__ A,
-                           const float* __restrict__ B,
-                           float* __restrict__ C,
-                           int M, int N, int K)
+                       const float* __restrict__ B,
+                       float* __restrict__ C,
+                       int M, int N, int K)
     {
         using namespace GEMM_CONFIG;
 
-        const int tx = threadIdx.x;
-        const int warpId = tx / 32;
-        const int laneId = tx % 32;
-
-        const int warpRow = warpId / WARPS_X;
-        const int warpCol = warpId % WARPS_X;
-
-        const int baseRow = blockIdx.y * BM + warpRow * WARP_M;
-        const int baseCol = blockIdx.x * BN + warpCol * WARP_N;
+        int row = blockIdx.y * BM + threadIdx.y;
+        int col = blockIdx.x * BN + threadIdx.x;
 
         __shared__ float As[BM][BK];
         __shared__ float Bs[BK][BN];
 
-        float acc[4] = {0.f, 0.f, 0.f, 0.f}; // small register tile
-
-        // lane mapping inside warp (8x4 = 32 threads)
-        const int laneRow = laneId / 8;
-        const int laneCol = laneId % 8;
+        float acc = 0.0f;
 
         for (int k0 = 0; k0 < K; k0 += BK)
         {
-            // =====================================================
-            // LOAD A (coalesced)
-            // =====================================================
-            for (int i = tx; i < BM * BK; i += blockDim.x)
+            // -------------------------
+            // Load A tile
+            // -------------------------
+            for (int i = threadIdx.y; i < BM; i += blockDim.y)
             {
-                int r = i / BK;
-                int c = i % BK;
+                for (int j = threadIdx.x; j < BK; j += blockDim.x)
+                {
+                    int gr = blockIdx.y * BM + i;
+                    int gc = k0 + j;
 
-                int gr = blockIdx.y * BM + r;
-                int gc = k0 + c;
-
-                As[r][c] = (gr < M && gc < K) ? A[gr * K + gc] : 0.f;
+                    As[i][j] = (gr < M && gc < K) ? A[gr * K + gc] : 0.0f;
+                }
             }
 
-            // =====================================================
-            // LOAD B (coalesced)
-            // =====================================================
-            for (int i = tx; i < BK * BN; i += blockDim.x)
+            // -------------------------
+            // Load B tile
+            // -------------------------
+            for (int i = threadIdx.y; i < BK; i += blockDim.y)
             {
-                int r = i / BN;
-                int c = i % BN;
+                for (int j = threadIdx.x; j < BN; j += blockDim.x)
+                {
+                    int gr = k0 + i;
+                    int gc = blockIdx.x * BN + j;
 
-                int gr = k0 + r;
-                int gc = blockIdx.x * BN + c;
-
-                Bs[r][c] = (gr < K && gc < N) ? B[gr * N + gc] : 0.f;
+                    Bs[i][j] = (gr < K && gc < N) ? B[gr * N + gc] : 0.0f;
+                }
             }
 
             __syncthreads();
 
-            // =====================================================
-            // WARP COMPUTE
-            // =====================================================
-            for (int k = 0; k < BK; ++k)
+            // -------------------------
+            // Compute
+            // -------------------------
+            if (row < M && col < N)
             {
-                int aRow = warpRow * WARP_M + laneRow;
-                int bCol = warpCol * WARP_N + laneCol;
-
-                float a = As[aRow][k];
-                float b = Bs[k][bCol];
-
-                acc[0] += a * b;
+                for (int k = 0; k < BK; ++k)
+                {
+                    acc += As[threadIdx.y][k] * Bs[k][threadIdx.x];
+                }
             }
 
             __syncthreads();
         }
 
-        // =========================================================
-        // STORE
-        // =========================================================
-        int r = blockIdx.y * BM + warpRow * WARP_M + laneRow;
-        int c = blockIdx.x * BN + warpCol * WARP_N + laneCol;
-
-        if (r < M && c < N)
-            C[r * N + c] = acc[0];    
+        // -------------------------
+        // Store
+        // -------------------------
+        if (row < M && col < N)
+        {
+            C[row * N + col] = acc;
+        }
     }
 }
