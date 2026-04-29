@@ -59,6 +59,14 @@ int main()
         std::cout << hC[i] << " ";
     std::cout << "\n expected =" << 2.0f * K;
 
+    for (int i = M-2; i < M; i++)
+    {
+        for (int j = N-2; j < N; j++)
+        {
+            std::cout << C[i*N + j] << " ";
+        }
+    }
+
     return 0;
 }
 
