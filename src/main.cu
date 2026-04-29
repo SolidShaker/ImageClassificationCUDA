@@ -69,7 +69,7 @@ int main()
 
     dCtest.Read(hCtest, sizeC);
 
-    std::cout << "GPU Time: " << gpuClocktest.GetTime() << "\n";
+    std::cout << "GPU Test Time: " << gpuClocktest.GetTime() << "\n";
 
     float maxError = 0.0f;
     int bad = 0;

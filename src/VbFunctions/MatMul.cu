@@ -10,7 +10,7 @@ namespace Vb
     {
         using namespace GEMM_CONFIG;
 
-        dim3 block(BN, BM);   // 128 x 128 threads
+        dim3 block(WARPS_X, WARPS_Y);   // 128 x 128 threads
         dim3 grid(
             (N + BN - 1) / BN,
             (M + BM - 1) / BM
