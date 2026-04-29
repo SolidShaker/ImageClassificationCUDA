@@ -1,79 +1,79 @@
-#include "MatMul.cuh"
+#include "matmul.cuh"
 
 
-namespace Vb
+namespace vb
 {
-    __host__ void GEMM(const float* A, 
-                       const float* B,
-                       float* C,
-                       int M, int N, int K)
+    __host__ void gemm(const float* a, 
+                       const float* b,
+                       float* c,
+                       int m, int n, int k)
     {
-        using namespace GEMM_CONFIG;
+        using namespace gemm_config;
 
-        dim3 block(BN, BM);   // 128 x 128 threads
+        dim3 block(bn, bm);   // 128 x 128 threads
         dim3 grid(
-            (N + BN - 1) / BN,
-            (M + BM - 1) / BM
+            (n + bn - 1) / bn,
+            (m + bm - 1) / bm
         );
 
-        krGEMM<<<gridDim, blockDim>>>(A, B, C, M, N, K);
+        krgemm<<<grid, block>>>(a, b, c, m, n, k);
     }
 
-    __global__ void krGEMM(const float* __restrict__ A,
-                       const float* __restrict__ B,
-                       float* __restrict__ C,
-                       int M, int N, int K)
+    __global__ void krgemm(const float* __restrict__ a,
+                       const float* __restrict__ b,
+                       float* __restrict__ c,
+                       int m, int n, int k)
     {
-        using namespace GEMM_CONFIG;
+        using namespace gemm_config;
 
-        int row = blockIdx.y * BM + threadIdx.y;
-        int col = blockIdx.x * BN + threadIdx.x;
+        int row = blockidx.y * bm + threadidx.y;
+        int col = blockidx.x * bn + threadidx.x;
 
-        __shared__ float As[BM][BK];
-        __shared__ float Bs[BK][BN];
+        __shared__ float as[bm][bk];
+        __shared__ float bs[bk][bn];
 
         float acc = 0.0f;
 
-        for (int k0 = 0; k0 < K; k0 += BK)
+        for (int k0 = 0; k0 < k; k0 += bk)
         {
             // -------------------------
-            // Load A tile
+            // load a tile
             // -------------------------
-            for (int i = threadIdx.y; i < BM; i += blockDim.y)
+            for (int i = threadidx.y; i < bm; i += blockdim.y)
             {
-                for (int j = threadIdx.x; j < BK; j += blockDim.x)
+                for (int j = threadidx.x; j < bk; j += blockdim.x)
                 {
-                    int gr = blockIdx.y * BM + i;
+                    int gr = blockidx.y * bm + i;
                     int gc = k0 + j;
 
-                    As[i][j] = (gr < M && gc < K) ? A[gr * K + gc] : 0.0f;
+                    as[i][j] = (gr < m && gc < k) ? a[gr * k + gc] : 0.0f;
                 }
             }
 
             // -------------------------
-            // Load B tile
+            // load b tile
             // -------------------------
-            for (int i = threadIdx.y; i < BK; i += blockDim.y)
+            for (int i = threadidx.y; i < bk; i += blockdim.y)
             {
-                for (int j = threadIdx.x; j < BN; j += blockDim.x)
+                for (int j = threadidx.x; j < bn; j += blockdim.x)
                 {
                     int gr = k0 + i;
-                    int gc = blockIdx.x * BN + j;
+                    int gc = blockidx.x * bn + j;
 
-                    Bs[i][j] = (gr < K && gc < N) ? B[gr * N + gc] : 0.0f;
+                    bs[i][j] = (gr < k && gc < n) ? b[gr * n + gc] : 0.0f;
                 }
             }
 
             __syncthreads();
 
             // -------------------------
-            // Compute
+            // compute
             // -------------------------
-            if (row < M && col < N)
+            if (row < m && col < n)
             {
-                for (int k = 0; k < BK; ++k)
+                for (int k = 0; k < bk; ++k)
                 {
-                    acc += As[threadIdx.y][k] * Bs[k][threadIdx.x];
+                    acc += as[threadidx.y][k] * bs[k][threadidx.x];
                 }
             }
 
@@ -81,11 +81,11 @@ namespace Vb
         }
 
         // -------------------------
-        // Store
+        // store
         // -------------------------
-        if (row < M && col < N)
+        if (row < m && col < n)
         {
-            C[row * N + col] = acc;
+            c[row * n + col] = acc;
         }
     }
 }
