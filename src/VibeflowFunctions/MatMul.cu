@@ -16,7 +16,7 @@ namespace VB
             (M + BM - 1) / BM
         );
 
-        krGemm<<<grid, block>>>(A, B, C, M, N, K);
+        krGEMM<<<grid, block>>>(A, B, C, M, N, K);
     }
 
     __global__ void krGEMM(const float* __restrict__ A,
