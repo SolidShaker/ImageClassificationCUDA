@@ -25,57 +25,80 @@ namespace Vb
                            int M, int N, int K)
     {
         using namespace GEMM_CONFIG;
-        int warpId = threadIdx.x / 32;
-        int laneId = threadIdx.x % 32;
 
-        int warpRow = warpId / WARPS_X;
-        int warpCol = warpId % WARPS_X;
+        const int tx = threadIdx.x;
+        const int warpId = tx / 32;
+        const int laneId = tx % 32;
 
-        int rowBase = blockIdx.y * BM + warpRow * WARP_M;
-        int colBase = blockIdx.x * BN + warpCol * WARP_N;
+        const int warpRow = warpId / WARPS_X;
+        const int warpCol = warpId % WARPS_X;
+
+        const int baseRow = blockIdx.y * BM + warpRow * WARP_M;
+        const int baseCol = blockIdx.x * BN + warpCol * WARP_N;
 
         __shared__ float As[BM][BK];
         __shared__ float Bs[BK][BN];
 
-        float acc[2] = {0.0f}; // register fragment (no TM/TN loops)
+        float acc[4] = {0.f, 0.f, 0.f, 0.f}; // small register tile
+
+        // lane mapping inside warp (8x4 = 32 threads)
+        const int laneRow = laneId / 8;
+        const int laneCol = laneId % 8;
 
         for (int k0 = 0; k0 < K; k0 += BK)
         {
-            // -------------------------
-            // Load A and B tiles
-            // -------------------------
-            int row = threadIdx.x / BK;
-            int col = threadIdx.x % BK;
+            // =====================================================
+            // LOAD A (coalesced)
+            // =====================================================
+            for (int i = tx; i < BM * BK; i += blockDim.x)
+            {
+                int r = i / BK;
+                int c = i % BK;
 
-            if (row < BM && (k0 + col) < K)
-                As[row][col] = A[(blockIdx.y * BM + row) * K + (k0 + col)];
+                int gr = blockIdx.y * BM + r;
+                int gc = k0 + c;
 
-            if (col < BN && (k0 + row) < K)
-                Bs[row][col] = B[(k0 + row) * N + (blockIdx.x * BN + col)];
+                As[r][c] = (gr < M && gc < K) ? A[gr * K + gc] : 0.f;
+            }
+
+            // =====================================================
+            // LOAD B (coalesced)
+            // =====================================================
+            for (int i = tx; i < BK * BN; i += blockDim.x)
+            {
+                int r = i / BN;
+                int c = i % BN;
+
+                int gr = k0 + r;
+                int gc = blockIdx.x * BN + c;
+
+                Bs[r][c] = (gr < K && gc < N) ? B[gr * N + gc] : 0.f;
+            }
 
             __syncthreads();
 
-            // -------------------------
-            // Warp-level computation
-            // -------------------------
+            // =====================================================
+            // WARP COMPUTE
+            // =====================================================
             for (int k = 0; k < BK; ++k)
             {
-                float a = As[rowBase + laneId / WARP_N][k];
-                float b = Bs[k][colBase + laneId % WARP_N];
+                float a = As[baseRow + laneRow][k];
+                float b = Bs[k][baseCol + laneCol];
 
+                // outer product (simple but correct)
                 acc[0] += a * b;
             }
 
             __syncthreads();
         }
 
-        // -------------------------
-        // Store results
-        // -------------------------
-        int r = rowBase + laneId / WARP_N;
-        int c = colBase + laneId % WARP_N;
+        // =========================================================
+        // STORE
+        // =========================================================
+        int r = baseRow + laneRow;
+        int c = baseCol + laneCol;
 
         if (r < M && c < N)
-            C[r * N + c] = acc[0];
+            C[r * N + c] = acc[0];    
     }
 }
