@@ -10,7 +10,7 @@ namespace VB
                         float* result,
                         int N)
     {
-        using DOT_CONFIG;
+        using namespace DOT_CONFIG;
 
         int N4 = N / 4;
         int gridSize = 

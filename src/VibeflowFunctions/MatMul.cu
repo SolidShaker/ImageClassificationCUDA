@@ -8,7 +8,7 @@ namespace VB
                        float* C,
                        int M, int N, int K)
     {
-        using GEMM_CONFIG;
+        using namespace GEMM_CONFIG;
 
         dim3 block(BN / TN, BM / TM); // (16,16)
         dim3 grid(
@@ -24,7 +24,7 @@ namespace VB
                            float* __restrict__ C,
                            int M, int N, int K)
     {
-        using GEMM_CONFIG;
+        using namespace GEMM_CONFIG;
 
         const int tx = threadIdx.x;   
         const int ty = threadIdx.y;   
