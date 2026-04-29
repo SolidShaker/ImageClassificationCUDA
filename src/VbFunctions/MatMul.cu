@@ -16,11 +16,10 @@ namespace Vb
         );
         krGEMM<<<grid, block>>>(A, B, C, M, N, K);
     }
-
     __global__ void krGEMM(const float* __restrict__ A,
-                           const float* __restrict__ B,
-                           float* __restrict__ C,
-                           int M, int N, int K)
+                            const float* __restrict__ B,
+                            float* __restrict__ C,
+                            int M, int N, int K)
     {
         int tx = threadIdx.x;
         int ty = threadIdx.y;
@@ -28,30 +27,53 @@ namespace Vb
         int row = blockIdx.y * TILE_SIZE + ty;
         int col = blockIdx.x * TILE_SIZE + tx;
 
-        __shared__ float tileA[TILE_SIZE][TILE_SIZE];
-        __shared__ float tileB[TILE_SIZE][TILE_SIZE];
+        __shared__ float4 tileA[TILE_SIZE][TILE_SIZE];
+        __shared__ float4 tileB[TILE_SIZE][TILE_SIZE];
 
-        float sum = 0.f;
-        for (int k0 = 0; k0 < (K + TILE_SIZE - 1) / TILE_SIZE; ++k0)
+        const float4* A4 = reinterpret_cast<const float4*>(A);
+        const float4* B4 = reinterpret_cast<const float4*>(B);
+
+        float sum = 0.0f;
+
+        int K4 = K / 4;
+
+        for (int k0 = 0; k0 < (K4 + TILE_SIZE - 1) / TILE_SIZE; ++k0)
         {
             int colA = k0 * TILE_SIZE + tx;
-            tileA[ty][tx] = (row < M & colA < K)
-                        ? A[row * K + colA] : 0.f;
+
+            tileA[ty][tx] =
+                (row < M && colA < K4)
+                ? A4[row * K4 + colA]
+                : make_float4(0.f, 0.f, 0.f, 0.f);
 
             int rowB = k0 * TILE_SIZE + ty;
-            tileB[ty][tx] = (rowB < K & col < N)
-                        ? B[rowB * K + col] : 0.f;
+
+            tileB[ty][tx] =
+                (rowB < K4 && col < N)
+                ? B4[rowB * N + col]
+                : make_float4(0.f, 0.f, 0.f, 0.f);
 
             __syncthreads();
 
-            for (int i = 0; i < TILE_SIZE; ++i)
-                sum += tileA[ty][i] * tileB[i][tx];
+            for (int k = 0; k < TILE_SIZE; ++k)
+            {
+                float4 a = tileA[ty][k];
+                float4 b = tileB[k][tx];
+
+                sum += a.x * b.x;
+                sum += a.y * b.y;
+                sum += a.z * b.z;
+                sum += a.w * b.w;
+            }
+
             __syncthreads();
         }
 
         if (row < M && col < N)
+        {
             C[row * N + col] = sum;
-    }
+        }
+    }    
 
     // __host__ void GEMM(const float* A, 
     //                    const float* B,
