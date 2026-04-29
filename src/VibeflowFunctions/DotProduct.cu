@@ -70,7 +70,7 @@ namespace VB
 
         if (warpId == 0)
         {
-            sum = (lane < (blockDim.x + TILE_SIZE) / TILE_SIZE) 
+            sum = (lane < (blockDim.x + TILE_SIZE - 1) / TILE_SIZE) 
                 ? warpSum[lane] : 0.f;
 
             sum = VB::krShflReduction(sum);
@@ -105,7 +105,7 @@ namespace VB
 
         if (warpId == 0)
         {
-            sum = (lane < (blockDim.x + TILE_SIZE) / TILE_SIZE) 
+            sum = (lane < (blockDim.x + TILE_SIZE - 1) / TILE_SIZE) 
                 ? shared[lane] : 0.f; 
 
             sum = VB::krShflReduction(sum);
