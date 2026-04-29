@@ -12,7 +12,7 @@ namespace Vb
 
 
     template<typename T>
-    Variable&
+    Variable<T>&
     Variable<T>::operator=(Variable&& other) noexcept
     {
         if (this != &other)
