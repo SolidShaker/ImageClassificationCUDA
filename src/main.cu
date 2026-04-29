@@ -7,6 +7,21 @@
 
 #include <iostream>
 
+void cpuGEMM(const float* A, const float* B, float* C, int M, int N, int K)
+{
+    for (int i = 0; i < M; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            float sum = 0.0f;
+            for (int k = 0; k < K; k++)
+            {
+                sum += A[i * K + k] * B[k * N + j];
+            }
+            C[i * N + j] = sum;
+        }
+    }
+}
 
 
 
@@ -59,13 +74,24 @@ int main()
         std::cout << hC[i] << " ";
     std::cout << "\n expected =" << 2.0f * K;
 
-    for (int i = M-2; i < M; i++)
+    float* hC_cpu = new float[sizeC];
+    cpuGEMM(hA, hB, hC_cpu, M, N, K);
+
+    float maxError = 0.0f;
+    int badCount = 0;
+
+    for (int i = 0; i < M * N; i++)
     {
-        for (int j = N-2; j < N; j++)
-        {
-            std::cout << C[i*N + j] << " ";
-        }
+        float diff = fabs(hC[i] - hC_cpu[i]);
+
+        maxError = std::max(maxError, diff);
+
+        if (diff > 1e-3f)
+            badCount++;
     }
+
+    std::cout << "Max error: " << maxError << std::endl;
+    std::cout << "Bad elements: " << badCount << " / " << (M * N) << std::endl;    
 
     return 0;
 }
