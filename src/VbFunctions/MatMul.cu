@@ -1,7 +1,7 @@
 #include "MatMul.cuh"
 
 
-namespace vb
+namespace Vb
 {
     __host__ void GEMM(const float* A, 
                        const float* B,
