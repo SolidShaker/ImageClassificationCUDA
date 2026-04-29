@@ -23,20 +23,21 @@ void cpuGEMM(const float* A, const float* B, float* C, int M, int N, int K)
     }
 }
 
-__global__ void testPattern(float* C, int N)
+__global__ void gemmIdentity(float* C, int M, int N)
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (i < N)
-        C[i] = (float)i;
+    if (r < M && c < N)
+        C[r * N + c] = r * 1000 + c;
 }
 
 void runTestKernel(float* dC, int N)
 {
-    int threads = 256;
-    int blocks = (N + threads - 1) / threads;
+    dim3 block(16, 16);
+    dim3 grid((N + 15) / 16, (M + 15) / 16);
 
-    testPattern<<<blocks, threads>>>(dC, N);
+    gemmIdentity<<<grid, block>>>(dC, M, N);
     cudaDeviceSynchronize();
 }
 
