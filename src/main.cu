@@ -23,11 +23,12 @@ void cpuGEMM(const float* A, const float* B, float* C, int M, int N, int K)
     }
 }
 
-__global__ void test(float* C, int N)
+__global__ void testPattern(float* C, int N)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
+
     if (i < N)
-        C[i] = 1.0f;
+        C[i] = (float)i;
 }
 
 void runTestKernel(float* dC, int N)
@@ -35,8 +36,7 @@ void runTestKernel(float* dC, int N)
     int threads = 256;
     int blocks = (N + threads - 1) / threads;
 
-    test<<<blocks, threads>>>(dC, N);
-
+    testPattern<<<blocks, threads>>>(dC, N);
     cudaDeviceSynchronize();
 }
 
