@@ -17,7 +17,7 @@ namespace Vb
         krGEMM<<<grid, block>>>(A, B, C, M, N, K);
     }
 
-    __global__ void gemm_register_tiled(
+    __global__ void krGEMM(
         const float* __restrict__ A,
         const float* __restrict__ B,
         float* __restrict__ C,
