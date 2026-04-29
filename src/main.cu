@@ -7,22 +7,6 @@
 
 #include <iostream>
 
-void cpuGEMM(const float* A, const float* B, float* C, int M, int N, int K)
-{
-    for (int i = 0; i < M; i++)
-    {
-        for (int j = 0; j < N; j++)
-        {
-            float sum = 0.0f;
-            for (int k = 0; k < K; k++)
-            {
-                sum += A[i * K + k] * B[k * N + j];
-            }
-            C[i * N + j] = sum;
-        }
-    }
-}
-
 __global__ void gemmIdentity(float* C, int M, int N)
 {
     int r = blockIdx.y * blockDim.y + threadIdx.y;
@@ -32,7 +16,7 @@ __global__ void gemmIdentity(float* C, int M, int N)
         C[r * N + c] = r * 1000 + c;
 }
 
-void runTestKernel(float* dC, int N)
+void runTestKernel(float* dC, int M, int N)
 {
     dim3 block(16, 16);
     dim3 grid((N + 15) / 16, (M + 15) / 16);
@@ -43,16 +27,17 @@ void runTestKernel(float* dC, int N)
 
 int main()
 {
+    int M = 1000;
     int N = 1000;
 
-    float* hC = new float[N];
+    float* hC = new float[M * N];
     float* dC;
 
-    cudaMalloc(&dC, N * sizeof(float));
+    cudaMalloc(&dC, M * N * sizeof(float));
 
-    runTestKernel(dC, N);
+    runTestKernel(dC, M, N);
 
-    cudaMemcpy(hC, dC, N * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(hC, dC, M * N * sizeof(float), cudaMemcpyDeviceToHost);
 
     for (int i = 0; i < 10; i++)
         std::cout << hC[i] << " ";
@@ -62,7 +47,6 @@ int main()
     cudaFree(dC);
     delete[] hC;
 }
-
 
 //
 // int main()
