@@ -18,62 +18,61 @@ namespace vb
 
         krgemm<<<grid, block>>>(a, b, c, m, n, k);
     }
-
-    __global__ void krgemm(const float* __restrict__ a,
-                       const float* __restrict__ b,
-                       float* __restrict__ c,
-                       int m, int n, int k)
+    __global__ void krGEMM(const float* __restrict__ A,
+                        const float* __restrict__ B,
+                        float* __restrict__ C,
+                        int M, int N, int K)
     {
-        using namespace gemm_config;
+        using namespace GEMM_CONFIG;
 
-        int row = blockidx.y * bm + threadidx.y;
-        int col = blockidx.x * bn + threadidx.x;
+        int row = blockIdx.y * BM + threadIdx.y;
+        int col = blockIdx.x * BN + threadIdx.x;
 
-        __shared__ float as[bm][bk];
-        __shared__ float bs[bk][bn];
+        __shared__ float As[BM][BK];
+        __shared__ float Bs[BK][BN];
 
         float acc = 0.0f;
 
-        for (int k0 = 0; k0 < k; k0 += bk)
+        for (int k0 = 0; k0 < K; k0 += BK)
         {
             // -------------------------
-            // load a tile
+            // Load A tile
             // -------------------------
-            for (int i = threadidx.y; i < bm; i += blockdim.y)
+            for (int i = threadIdx.y; i < BM; i += blockDim.y)
             {
-                for (int j = threadidx.x; j < bk; j += blockdim.x)
+                for (int j = threadIdx.x; j < BK; j += blockDim.x)
                 {
-                    int gr = blockidx.y * bm + i;
+                    int gr = blockIdx.y * BM + i;
                     int gc = k0 + j;
 
-                    as[i][j] = (gr < m && gc < k) ? a[gr * k + gc] : 0.0f;
+                    As[i][j] = (gr < M && gc < K) ? A[gr * K + gc] : 0.0f;
                 }
             }
 
             // -------------------------
-            // load b tile
+            // Load B tile
             // -------------------------
-            for (int i = threadidx.y; i < bk; i += blockdim.y)
+            for (int i = threadIdx.y; i < BK; i += blockDim.y)
             {
-                for (int j = threadidx.x; j < bn; j += blockdim.x)
+                for (int j = threadIdx.x; j < BN; j += blockDim.x)
                 {
                     int gr = k0 + i;
-                    int gc = blockidx.x * bn + j;
+                    int gc = blockIdx.x * BN + j;
 
-                    bs[i][j] = (gr < k && gc < n) ? b[gr * n + gc] : 0.0f;
+                    Bs[i][j] = (gr < K && gc < N) ? B[gr * N + gc] : 0.0f;
                 }
             }
 
             __syncthreads();
 
             // -------------------------
-            // compute
+            // Compute
             // -------------------------
-            if (row < m && col < n)
+            if (row < M && col < N)
             {
-                for (int k = 0; k < bk; ++k)
+                for (int k = 0; k < BK; ++k)
                 {
-                    acc += as[threadidx.y][k] * bs[k][threadidx.x];
+                    acc += As[threadIdx.y][k] * Bs[k][threadIdx.x];
                 }
             }
 
@@ -81,11 +80,11 @@ namespace vb
         }
 
         // -------------------------
-        // store
+        // Store
         // -------------------------
-        if (row < m && col < n)
+        if (row < M && col < N)
         {
-            c[row * n + col] = acc;
+            C[row * N + col] = acc;
         }
     }
 }
