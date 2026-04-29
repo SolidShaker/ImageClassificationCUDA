@@ -3,7 +3,7 @@
 
 namespace vb
 {
-    __host__ void gemm(const float* A, 
+    __host__ void GEMM(const float* A, 
                        const float* B,
                        float* C,
                        int M, int N, int K)
