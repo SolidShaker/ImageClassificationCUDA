@@ -46,6 +46,7 @@ namespace Vb
 
             for (int i = 0; i < TILE_SIZE; ++i)
                 sum += tileA[ty][i] * tileB[i][tx];
+            __syncthreads();
         }
 
         if (row < M && col < N)
