@@ -20,9 +20,9 @@ int main()
     int N = 2505;
     int K = 2502;
 
-    int pM= Vb::GetPadding(M, 4);
-    int pN= Vb::GetPadding(N, 4);
-    int pK= Vb::GetPadding(K, 4);
+    int pM= Vb::GetPadding(M, 32);
+    int pN= Vb::GetPadding(N, 32);
+    int pK= Vb::GetPadding(K, 32);
 
     size_t sizeA = M * K;
     size_t sizeB = K * N;
