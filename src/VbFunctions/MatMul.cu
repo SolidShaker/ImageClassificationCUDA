@@ -11,17 +11,16 @@ namespace Vb
     {
         dim3 block(TILE_SIZE, TILE_SIZE);
         dim3 grid(
-                (N + TILE_SIZE - 1) / TILE_SIZE, 
-                (M + TILE_SIZE - 1) / TILE_SIZE
+                (N + TILE_SIZE - 1) / TILE_SIZE / 4, 
+                (M + TILE_SIZE - 1) / TILE_SIZE / 4
         );
         krGEMM<<<grid, block>>>(A, B, C, M, N, K);
     }
 
-    __global__ void krGEMM(
-        const float* __restrict__ A,
-        const float* __restrict__ B,
-        float* __restrict__ C,
-        int M, int N, int K)
+    __global__ void krGEMM(const float* __restrict__ A,
+                            const float* __restrict__ B,
+                            float* __restrict__ C,
+                            int M, int N, int K)
     {
         int tx = threadIdx.x;
         int ty = threadIdx.y;
@@ -29,41 +28,46 @@ namespace Vb
         int row = blockIdx.y * TILE_SIZE + ty;
         int col = blockIdx.x * TILE_SIZE + tx;
 
+        __shared__ float4 tileA[TILE_SIZE][TILE_SIZE];
+        __shared__ float4 tileB[TILE_SIZE][TILE_SIZE];
+
+        const float4* A4 = reinterpret_cast<const float4*>(A);
+        const float4* B4 = reinterpret_cast<const float4*>(B);
+
         float sum = 0.0f;
 
-        // Each thread accumulates over K in chunks
-        for (int k0 = 0; k0 < K; k0 += TILE_SIZE)
+        int K4 = K / 4;
+
+        for (int k0 = 0; k0 < (K4 + TILE_SIZE - 1) / TILE_SIZE; ++k0)
         {
-            // Register buffers (NO shared memory)
-            float aReg[TILE_SIZE];
-            float bReg[TILE_SIZE];
+            int colA = k0 * TILE_SIZE + tx;
 
-            // Load a row segment of A into registers
-            #pragma unroll
-            for (int i = 0; i < TILE_SIZE; i++)
+            tileA[ty][tx] =
+                (row < M && colA < K4)
+                ? A4[row * K4 + colA]
+                : make_float4(0.f, 0.f, 0.f, 0.f);
+
+            int rowB = k0 * TILE_SIZE + ty;
+
+            tileB[ty][tx] =
+                (rowB < K4 && col < N)
+                ? B4[rowB * N + col]
+                : make_float4(0.f, 0.f, 0.f, 0.f);
+
+            __syncthreads();
+
+            for (int k = 0; k < TILE_SIZE; ++k)
             {
-                int aCol = k0 + i;
-                aReg[i] = (row < M && aCol < K)
-                        ? A[row * K + aCol]
-                        : 0.0f;
+                float4 a = tileA[ty][k];
+                float4 b = tileB[k][tx];
+
+                sum += a.x * b.x;
+                sum += a.y * b.y;
+                sum += a.z * b.z;
+                sum += a.w * b.w;
             }
 
-            // Load a column segment of B into registers
-            #pragma unroll
-            for (int i = 0; i < TILE_SIZE; i++)
-            {
-                int bRow = k0 + i;
-                bReg[i] = (bRow < K && col < N)
-                        ? B[bRow * N + col]
-                        : 0.0f;
-            }
-
-            // Compute dot product of this tile
-            #pragma unroll
-            for (int i = 0; i < TILE_SIZE; i++)
-            {
-                sum += aReg[i] * bReg[i];
-            }
+            __syncthreads();
         }
 
         if (row < M && col < N)
