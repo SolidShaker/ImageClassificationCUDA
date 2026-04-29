@@ -39,8 +39,8 @@ namespace Vb
                         ? A[row * K + colA] : 0.f;
 
             int rowB = k0 * TILE_SIZE + ty;
-            tileA[ty][tx] = (rowB < K & col < N)
-                        ? A[rowB * K + col] : 0.f;
+            tileB[ty][tx] = (rowB < K & col < N)
+                        ? B[rowB * K + col] : 0.f;
 
             __syncthreads();
 
