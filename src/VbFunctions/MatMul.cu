@@ -82,10 +82,12 @@ namespace Vb
             // =====================================================
             for (int k = 0; k < BK; ++k)
             {
-                float a = As[baseRow + laneRow][k];
-                float b = Bs[k][baseCol + laneCol];
+                int aRow = warpRow * WARP_M + laneRow;
+                int bCol = warpCol * WARP_N + laneCol;
 
-                // outer product (simple but correct)
+                float a = As[aRow][k];
+                float b = Bs[k][bCol];
+
                 acc[0] += a * b;
             }
 
@@ -95,8 +97,8 @@ namespace Vb
         // =========================================================
         // STORE
         // =========================================================
-        int r = baseRow + laneRow;
-        int c = baseCol + laneCol;
+        int r = blockIdx.y * BM + warpRow * WARP_M + laneRow;
+        int c = blockIdx.x * BN + warpCol * WARP_N + laneCol;
 
         if (r < M && c < N)
             C[r * N + c] = acc[0];    
