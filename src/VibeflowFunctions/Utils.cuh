@@ -3,15 +3,30 @@
 
 #include <cuda_runtime.h>
 
-
-
-
 constexpr unsigned int FULL_MASK = 0xffffffff;
 constexpr int TILE_SIZE = 32;
+
+#define DEBUG 1
+
+#if DEBUG
+    #define CUDA_CHECK(msg) do {                                   \
+        cudaError_t err = cudaGetLastError();                      \
+        if (err != cudaSuccess) {                                  \
+            std::cout << msg << " error: "                         \
+                      << cudaGetErrorString(err) << std::endl;     \
+        }                                                          \
+    } while(0)
+#else
+    #define CUDA_CHECK(msg) do {} while(0)
+#endif
+
+
 
 
 namespace VB
 {
+
+
     template<typename T>
     __device__ __forceinline__ T krShflReduction(T var)
     {
