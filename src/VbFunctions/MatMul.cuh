@@ -12,8 +12,8 @@ namespace GEMM_CONFIG
     constexpr int BN = 128;   // block tile N
     constexpr int BK = 32;    // K tile
 
-    constexpr int TM = 8;     // per-thread rows
-    constexpr int TN = 8;     // per-thread cols
+    constexpr int TM = 4;     // per-thread rows
+    constexpr int TN = 4;     // per-thread cols
 }
 
 namespace Vb
