@@ -15,6 +15,8 @@ namespace Vb
             (N + BN - 1) / BN,
             (M + BM - 1) / BM
         );
+
+        krGEMM<<<gridDim, blockDim>>>(A, B, C, M, N, K);
     }
 
     __global__ void krGEMM(const float* __restrict__ A,
