@@ -10,7 +10,7 @@ namespace Vb
     {
         using namespace GEMM_CONFIG;
 
-        dim3 block(WARPS_X, WARPS_Y);   // 128 x 128 threads
+        dim3 block(BN / TN, BM / TM); // (16,16)
         dim3 grid(
             (N + BN - 1) / BN,
             (M + BM - 1) / BM
@@ -18,73 +18,125 @@ namespace Vb
 
         krGEMM<<<grid, block>>>(A, B, C, M, N, K);
     }
+
     __global__ void krGEMM(const float* __restrict__ A,
-                        const float* __restrict__ B,
-                        float* __restrict__ C,
-                        int M, int N, int K)
+                           const float* __restrict__ B,
+                           float* __restrict__ C,
+                           int M, int N, int K)
     {
         using namespace GEMM_CONFIG;
 
-        int row = blockIdx.y * BM + threadIdx.y;
-        int col = blockIdx.x * BN + threadIdx.x;
+        const int tx = threadIdx.x;   
+        const int ty = threadIdx.y;   
+
+        const int threadRow = ty * TM;
+        const int threadCol = tx * TN;
+
+        const int blockRow = blockIdx.y * BM;
+        const int blockCol = blockIdx.x * BN;
 
         __shared__ float As[BM][BK];
         __shared__ float Bs[BK][BN];
 
-        float acc = 0.0f;
+        float acc[TM][TN];
 
+        #pragma unroll
+        for (int i = 0; i < TM; i++)
+            #pragma unroll
+            for (int j = 0; j < TN; j++)
+                acc[i][j] = 0.f;
+        
         for (int k0 = 0; k0 < K; k0 += BK)
         {
-            // -------------------------
-            // Load A tile
-            // -------------------------
-            for (int i = threadIdx.y; i < BM; i += blockDim.y)
+            //
+            // Load A tile to shared memory
+            //
+            for (int i = ty; i < BM; i += blockDim.y)
             {
-                for (int j = threadIdx.x; j < BK; j += blockDim.x)
+                for (int j = tx; j < BK; j += blockDim.x)
                 {
-                    int gr = blockIdx.y * BM + i;
-                    int gc = k0 + j;
+                    int globalRow = blockRow + i;
+                    int globalCol = k0 + j;
 
-                    As[i][j] = (gr < M && gc < K) ? A[gr * K + gc] : 0.0f;
+                    As[i][j] =
+                        (globalRow < M && globalCol < K)
+                        ? A[globalRow * K + globalCol]
+                        : 0.f;
                 }
             }
 
-            // -------------------------
-            // Load B tile
-            // -------------------------
-            for (int i = threadIdx.y; i < BK; i += blockDim.y)
+            //
+            // Load B tile to shared memory
+            //
+            for (int i = ty; i < BK; i += blockDim.y)
             {
-                for (int j = threadIdx.x; j < BN; j += blockDim.x)
+                for (int j = tx; j < BN; j += blockDim.x)
                 {
-                    int gr = k0 + i;
-                    int gc = blockIdx.x * BN + j;
+                    int globalRow = k0 + i;
+                    int globalCol = blockCol + j;
 
-                    Bs[i][j] = (gr < K && gc < N) ? B[gr * N + gc] : 0.0f;
+                    Bs[i][j] =
+                        (globalRow < K && globalCol < N)
+                        ? B[globalRow * N + globalCol]
+                        : 0.f;
                 }
             }
 
             __syncthreads();
 
-            // -------------------------
-            // Compute
-            // -------------------------
-            if (row < M && col < N)
+            //
+            // Compute on shared tiles
+            //
+            #pragma unroll
+            for (int k = 0; k < BK; ++k)
             {
-                for (int k = 0; k < BK; ++k)
+                float aFrag[TM];
+                float bFrag[TN];
+
+                // load A fragment to registers
+                #pragma unroll
+                for (int i = 0; i < TM; ++i)
+                    aFrag[i] = As[threadRow + i][k];
+
+                // load B fragment to registers
+                #pragma unroll
+                for (int j = 0; j < TN; ++j)
+                    bFrag[j] = Bs[k][threadCol + j];
+
+                // outer product update
+                #pragma unroll
+                for (int i = 0; i < TM; ++i)
                 {
-                    acc += As[threadIdx.y][k] * Bs[k][threadIdx.x];
+                    #pragma unroll
+                    for (int j = 0; j < TN; ++j)
+                    {
+                        acc[i][j] += aFrag[i] * bFrag[j];
+                    }
                 }
             }
 
             __syncthreads();
         }
 
-        // -------------------------
-        // Store
-        // -------------------------
-        if (row < M && col < N)
+        //
+        // Store results
+        //
+        #pragma unroll
+        for (int i = 0; i < TM; ++i)
         {
-            C[row * N + col] = acc;
+            int globalRow = blockRow + threadRow + i;
+
+            if (globalRow < M)
+            {
+                #pragma unroll
+                for (int j = 0; j < TN; ++j)
+                {
+                    int globalCol = blockCol + threadCol + j;
+
+                    if (globalCol < N)
+                        C[globalRow * N + globalCol] = acc[i][j];
+                }
+            }
         }
     }
 }

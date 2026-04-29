@@ -5,18 +5,14 @@
 #include <cuda_runtime.h>
 
 
-
 namespace GEMM_CONFIG
 {
-    constexpr int BM = 128;
-    constexpr int BN = 128;
-    constexpr int BK = 16;
+    constexpr int BM = 128;   // block tile M
+    constexpr int BN = 128;   // block tile N
+    constexpr int BK = 32;    // K tile
 
-    constexpr int WARPS_X = 4;
-    constexpr int WARPS_Y = 4;
-
-    constexpr int WARP_M = BM / WARPS_Y; // 32
-    constexpr int WARP_N = BN / WARPS_X; // 32
+    constexpr int TM = 8;     // per-thread rows
+    constexpr int TN = 8;     // per-thread cols
 }
 
 namespace Vb
