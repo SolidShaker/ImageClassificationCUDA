@@ -61,7 +61,7 @@ namespace Vb
             idx += stride;
         }
 
-        sum = VB::krShflReduction(sum);
+        sum = Vb::krShflReduction(sum);
         
         if (lane == 0)
             warpSum[warpId] = sum;
@@ -73,7 +73,7 @@ namespace Vb
             sum = (lane < (blockDim.x + TILE_SIZE - 1) / TILE_SIZE) 
                 ? warpSum[lane] : 0.f;
 
-            sum = VB::krShflReduction(sum);
+            sum = Vb::krShflReduction(sum);
 
             if (lane == 0)
                 blockSum[blockIdx.x] = sum;
@@ -96,7 +96,7 @@ namespace Vb
         for (int i = tx; i < N; i += blockDim.x) 
             sum += blockSum[i]; 
 
-        sum = VB::krShflReduction(sum);
+        sum = Vb::krShflReduction(sum);
 
         if (lane == 0) 
             shared[warpId] = sum; 
@@ -108,7 +108,7 @@ namespace Vb
             sum = (lane < (blockDim.x + TILE_SIZE - 1) / TILE_SIZE) 
                 ? shared[lane] : 0.f; 
 
-            sum = VB::krShflReduction(sum);
+            sum = Vb::krShflReduction(sum);
 
             if (lane == 0) 
                 *result = sum; 
