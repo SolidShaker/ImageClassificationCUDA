@@ -46,8 +46,8 @@ namespace VB
         __shared__ float warpSum[TILE_SIZE];
 
 
-        const float4 *A4 = reinterpret_cast<float4*>(A);
-        const float4 *B4 = reinterpret_cast<float4*>(B);
+        const float4 *A4 = reinterpret_cast<const float4*>(A);
+        const float4 *B4 = reinterpret_cast<const float4*>(B);
 
         float sum = 0.f;
 
