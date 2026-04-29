@@ -3,20 +3,20 @@
 
 namespace vb
 {
-    __host__ void gemm(const float* a, 
-                       const float* b,
-                       float* c,
-                       int m, int n, int k)
+    __host__ void gemm(const float* A, 
+                       const float* B,
+                       float* C,
+                       int M, int N, int K)
     {
-        using namespace gemm_config;
+        using namespace GEMM_CONFIG;
 
-        dim3 block(bn, bm);   // 128 x 128 threads
+        dim3 block(BN, BM);   // 128 x 128 threads
         dim3 grid(
-            (n + bn - 1) / bn,
-            (m + bm - 1) / bm
+            (N + BN - 1) / BN,
+            (M + BM - 1) / BM
         );
 
-        krgemm<<<grid, block>>>(a, b, c, m, n, k);
+        krGEMM<<<grid, block>>>(A, B, C, M, N, K);
     }
     __global__ void krGEMM(const float* __restrict__ A,
                         const float* __restrict__ B,
